@@ -46,15 +46,14 @@ def make_move_if_valid(button_idx):
             buttons[button_idx]['text'] = square_state
 
 
-def check_for_result(buttons, from_minimax = False):
+def check_for_result(buttons_input, from_minimax = False):
+    board_state = []
+    for j in range(3):
+        board_state.append([])
+        for k in range(3):
+            board_state[j].append(buttons_input[3 * j + k])
+    
     for i in range(5):
-        board_state = []
-
-        for j in range(3):
-            board_state.append([])
-            for k in range(3):
-                board_state[j].append(buttons[3 * j + k])
-
         #print(board_state)
         board_state = rot90(board_state, i)
         #print('after rot ' + str(i) + ': ' + str(board_state))
@@ -69,11 +68,6 @@ def check_for_result(buttons, from_minimax = False):
             elif board_state[0][0]['text'] == board_state[1][1]['text'] == board_state[2][2]['text'] and board_state[0][0]['text'] != ' ':
                 return board_state[0][0]['text'] + ' Wins!'
 
-            for i in range(3):
-                for j in range(3):
-                    if board_state[i][j]['text'] == ' ':
-                        return None
-
         else:
             if board_state[0][0] == board_state[0][1] == board_state[0][2] and board_state[0][0] != ' ':
                 return board_state[0][0] + ' Wins!'
@@ -84,12 +78,19 @@ def check_for_result(buttons, from_minimax = False):
             elif board_state[0][0] == board_state[1][1] == board_state[2][2] and board_state[0][0] != ' ':
                 return board_state[0][0] + ' Wins!'
 
-            for i in range(3):
-                for j in range(3):
-                    if board_state[i][j] == ' ':
-                        return None
-    
-        return 'Tie!'
+    if not from_minimax:
+        for i in range(3):
+            for j in range(3):
+                if board_state[i][j]['text'] == ' ':
+                    return None
+
+    else:
+        for i in range(3):
+            for j in range(3):
+                if board_state[i][j] == ' ':
+                    return None    
+
+    return 'Tie!'
 
 
 def minimax(board_state, depth, initial_depth, computer_to_move):
@@ -100,50 +101,48 @@ def minimax(board_state, depth, initial_depth, computer_to_move):
             board_state_from_buttons.append(board_state[i]['text'])
 
         board_state = board_state_from_buttons
+        print(board_state)
 
-    print(board_state)
+    #print(board_state)
     if depth == 0 or check_for_result(board_state, True) != None:
-        print('End State Reached!')
-        if check_for_result(buttons, True) == 'X Wins!':
-            return [-1000 - depth + initial_depth]
+        result = check_for_result(board_state, True)
 
-        if check_for_result(board_state, True) == 'O Wins!':
-            return [1000 + depth - initial_depth]
+        if result == 'Tie!':
+            return 0
+        
+        elif result == 'X Wins!':
+            return -10#00 - depth + initial_depth
 
-        if check_for_result(board_state, True) == 'Tie!':
-            return [0]
+        elif result == 'O Wins!':
+            return 10#00 + depth - initial_depth
 
-        else:
-            return [0]
+        return 0
 
     if computer_to_move:
-        #print('c')
-        for i in range(3):
-            for j in range(3):
-                if board_state[3 * i + j] == ' ':
-                    board_state[3 * i + j] = 'O'
-                    eval = minimax(board_state, depth - 1, initial_depth, False)
-                    #print(eval)
-                    max_eval = max(eval)
+        evals = []
+        for i in range(9):
+            if board_state[i] == ' ':
+                board_state[i] = 'O'
+                eval = minimax(board_state, depth - 1, initial_depth, False)
+                evals.append(eval)     
+                
+                board_state[i] = ' '
         
-                    board_state[3 * i + j] = ' '
-        
-        return [max_eval]
+        return max(evals)
 
     else:
-        #print('p')
-        for i in range(3):
-            for j in range(3):
-                if board_state[3 * i + j] == ' ':
-                    board_state[3 * i + j] = 'X'
-                    eval = minimax(board_state, depth - 1, initial_depth, True)
-                    #print(eval)
-                    min_eval = min(eval)
+        evals = []
+        for i in range(9):
+            if board_state[i] == ' ':
+                board_state[i] = 'X'
+                print(board_state)
+                eval = minimax(board_state, depth - 1, initial_depth, True)
+                evals.append(eval)
         
-                    board_state[3 * i + j] = ' '
-        
-        return [min_eval]
+                board_state[i] = ' '
 
-print(minimax(buttons, 3, 3, True))
+        return min(evals)
+
+print(minimax(buttons, 6, 6, False))
 root.mainloop()
 
