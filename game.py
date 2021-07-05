@@ -1,40 +1,35 @@
 import tkinter as tk
 from numpy import rot90
-from copy import copy
-from time import perf_counter
-
-
-root = tk.Tk()
-root.title('Tic Tac Toe')
+import webbrowser
 
 
 player = ('X', 'O')
 player_idx = 0
 square_state = None
-
-
-buttons = []
-
-for i in range(9):
-    b = tk.Button(root, text = ' ', font = ('Arial', 25), height = 12, width = 24, command = lambda i = i: make_move_if_valid(i))
-    buttons.append(b)
-
-for i in range(len(buttons)):
-    buttons[i].grid(row = int(i / 3) + 1, column = i % 3)
+win_alert = None
+moves = 0
 
 
 def make_move_if_valid(button_idx):
     global player_idx
     global square_state
-    if check_for_result(buttons) == None:
+    global win_alert
+    global moves
+
+    board_state = board_state_from_buttons()
+
+    if check_for_result(board_state) == None:
         if buttons[button_idx]['text'] != 'Invalid Move!':
+            moves += 1
             if buttons[button_idx]['text'] == ' ':
                 buttons[button_idx]['text'] = player[player_idx]
                 player_idx = (player_idx + 1) % 2 
+                
+                board_state = board_state_from_buttons()
 
-                if check_for_result(buttons) != None:
-                    print(check_for_result(buttons))
-                    win_alert = tk.Label(root, text = check_for_result(buttons), font = ('Arial', 50))
+                if check_for_result(board_state) != None:
+                    #(check_for_result(board_state))
+                    win_alert = tk.Label(root, text = check_for_result(board_state) + ' in ' + str(moves) + ' moves!', font = ('Arial', 50))
                     win_alert.grid(row = 0, column = 1)
 
             else:
@@ -46,103 +41,128 @@ def make_move_if_valid(button_idx):
             buttons[button_idx]['text'] = square_state
 
 
-def check_for_result(buttons_input, from_minimax = False):
+def board_state_from_buttons():
     board_state = []
-    for j in range(3):
+    for i in range(3):
         board_state.append([])
-        for k in range(3):
-            board_state[j].append(buttons_input[3 * j + k])
-    
+        for j in range(3):
+            board_state[i].append(buttons[3 * i + j]['text'])
+
+    return board_state
+
+
+def check_for_result(board_state):
     for i in range(5):
-        #print(board_state)
         board_state = rot90(board_state, i)
-        #print('after rot ' + str(i) + ': ' + str(board_state))
+        if board_state[0][0] == board_state[0][1] == board_state[0][2] and board_state[0][0] != ' ':
+            return board_state[0][0] + ' Won'
 
-        if not from_minimax:
-            if board_state[0][0]['text'] == board_state[0][1]['text'] == board_state[0][2]['text'] and board_state[0][0]['text'] != ' ':
-                return board_state[0][0]['text'] + ' Wins!'
+        elif board_state[0][1] == board_state[1][1] == board_state[2][1] and board_state[0][1] != ' ':
+            return board_state[0][1] + ' Won'
 
-            elif board_state[0][1]['text'] == board_state[1][1]['text'] == board_state[2][1]['text'] and board_state[0][1]['text'] != ' ':
-                return board_state[0][1]['text'] + ' Wins!'
+        elif board_state[0][0] == board_state[1][1] == board_state[2][2] and board_state[0][0] != ' ':
+            return board_state[0][0] + ' Won'
 
-            elif board_state[0][0]['text'] == board_state[1][1]['text'] == board_state[2][2]['text'] and board_state[0][0]['text'] != ' ':
-                return board_state[0][0]['text'] + ' Wins!'
+
+    for i in range(3):
+        for j in range(3):
+            if board_state[i][j] == ' ':
+                return None
+
+    return 'Tie'
+
+
+def minimax(board_state, player_idx, depth_limit, depth = 0):
+    if check_for_result(board_state) != None or depth == depth_limit:
+        if check_for_result(board_state) == 'X Won':
+            return 10 + depth
+
+        elif check_for_result(board_state) == 'O Won':
+            return -10 - depth
 
         else:
-            if board_state[0][0] == board_state[0][1] == board_state[0][2] and board_state[0][0] != ' ':
-                return board_state[0][0] + ' Wins!'
+            return 0
 
-            elif board_state[0][1] == board_state[1][1] == board_state[2][1] and board_state[0][1] != ' ':
-                return board_state[0][1] + ' Wins!'
-
-            elif board_state[0][0] == board_state[1][1] == board_state[2][2] and board_state[0][0] != ' ':
-                return board_state[0][0] + ' Wins!'
-
-    if not from_minimax:
-        for i in range(3):
-            for j in range(3):
-                if board_state[i][j]['text'] == ' ':
-                    return None
-
-    else:
+    if player_idx == 0:
+        move_scores = [-100 for i in range(9)]
         for i in range(3):
             for j in range(3):
                 if board_state[i][j] == ' ':
-                    return None    
-
-    return 'Tie!'
-
-
-def minimax(board_state, depth, initial_depth, computer_to_move):
-    # 1000 is used in lieu of infinity and -1000 is used in lieu of -infinity
-    if depth == initial_depth:
-        board_state_from_buttons = []
-        for i in range(len(board_state)):
-            board_state_from_buttons.append(board_state[i]['text'])
-
-        board_state = board_state_from_buttons
-        print(board_state)
-
-    #print(board_state)
-    if depth == 0 or check_for_result(board_state, True) != None:
-        result = check_for_result(board_state, True)
-
-        if result == 'Tie!':
-            return 0
+                    board_state[i][j] = 'X'
+                    move_scores[3 * i + j] = minimax(board_state, (player_idx + 1) % 2, depth_limit, depth + 1)
+                    board_state[i][j] = ' '
         
-        elif result == 'X Wins!':
-            return -10#00 - depth + initial_depth
+        if depth != 0:
+            return max(move_scores)
 
-        elif result == 'O Wins!':
-            return 10#00 + depth - initial_depth
-
-        return 0
-
-    if computer_to_move:
-        evals = []
-        for i in range(9):
-            if board_state[i] == ' ':
-                board_state[i] = 'O'
-                eval = minimax(board_state, depth - 1, initial_depth, False)
-                evals.append(eval)     
-                
-                board_state[i] = ' '
-        
-        return max(evals)
+        else:
+            return move_scores.index(max(move_scores))
 
     else:
-        evals = []
-        for i in range(9):
-            if board_state[i] == ' ':
-                board_state[i] = 'X'
-                print(board_state)
-                eval = minimax(board_state, depth - 1, initial_depth, True)
-                evals.append(eval)
-        
-                board_state[i] = ' '
+        move_scores = [100 for i in range(9)]
+        for i in range(3):
+            for j in range(3):
+                if board_state[i][j] == ' ':
+                    board_state[i][j] = 'O'
+                    move_scores[3 * i + j] = minimax(board_state, (player_idx + 1) % 2, depth_limit, depth + 1)
+                    board_state[i][j] = ' '
 
-        return min(evals)
+        if depth != 0:
+            return min(move_scores)
 
-print(minimax(buttons, 6, 6, False))
+        else:
+            #print(move_scores)
+            #print(player_idx)
+            return move_scores.index(min(move_scores))
+
+
+def make_computer_move():
+    #print(moves)
+    if moves == 0:
+        make_move_if_valid(0)
+
+    else:
+        idx = minimax(board_state_from_buttons(), player_idx, 20)
+        #print(idx)
+        make_move_if_valid(idx)
+
+
+def new_match():
+    global player_idx
+    global square_state
+    global win_alert
+
+    for button in buttons:
+        button['text'] = ' '
+
+    player_idx = 0
+    square_state = None
+    if win_alert != None:
+        win_alert.destroy()
+        win_alert = None
+
+
+root = tk.Tk()
+root.title('Tic Tac Toe')
+
+
+buttons = []
+
+for i in range(9):
+    b = tk.Button(root, text = ' ', font = ('Arial', 25), height = 12, width = 24, command = lambda i = i: make_move_if_valid(i))
+    buttons.append(b)
+
+for i in range(len(buttons)):
+    buttons[i].grid(row = int(i / 3) + 1, column = i % 3)
+
+computer_move_button = tk.Button(root, text = 'Computer Move', command = make_computer_move)
+computer_move_button.grid(row = 4, column = 0)
+
+new_match_button = tk.Button(root, text = 'New Match', command = new_match)
+new_match_button.grid(row = 4, column = 1)
+
+view_source_code_button = tk.Button(root, text = 'Source Code', command = lambda: webbrowser.open('https://github.com/NinjadenMu/TicTacToe_with_MinMax'))
+view_source_code_button.grid(row = 4, column = 2)
+
+
 root.mainloop()
-
