@@ -72,13 +72,13 @@ def check_for_result(board_state):
     return 'Tie'
 
 
-def minimax(board_state, player_idx, depth_limit, depth = 0):
+def minimax(board_state, player_idx, depth_limit, alpha, beta, depth = 0):
     if check_for_result(board_state) != None or depth == depth_limit:
         if check_for_result(board_state) == 'X Won':
-            return 10 + depth
+            return 10 - depth
 
         elif check_for_result(board_state) == 'O Won':
-            return -10 - depth
+            return -10 + depth
 
         else:
             return 0
@@ -89,8 +89,13 @@ def minimax(board_state, player_idx, depth_limit, depth = 0):
             for j in range(3):
                 if board_state[i][j] == ' ':
                     board_state[i][j] = 'X'
-                    move_scores[3 * i + j] = minimax(board_state, (player_idx + 1) % 2, depth_limit, depth + 1)
+                    eval = minimax(board_state, (player_idx + 1) % 2, depth_limit, alpha, beta, depth + 1)
+                    move_scores[3 * i + j] = eval
                     board_state[i][j] = ' '
+                    
+                    alpha = max(alpha, eval)
+                    if alpha >= beta:
+                        break
         
         if depth != 0:
             return max(move_scores)
@@ -104,8 +109,13 @@ def minimax(board_state, player_idx, depth_limit, depth = 0):
             for j in range(3):
                 if board_state[i][j] == ' ':
                     board_state[i][j] = 'O'
-                    move_scores[3 * i + j] = minimax(board_state, (player_idx + 1) % 2, depth_limit, depth + 1)
+                    eval = minimax(board_state, (player_idx + 1) % 2, depth_limit, alpha, beta, depth + 1)
+                    move_scores[3 * i + j] = eval
                     board_state[i][j] = ' '
+                    
+                    beta = min(beta, eval)
+                    if alpha >= beta:
+                        break
 
         if depth != 0:
             return min(move_scores)
@@ -122,7 +132,7 @@ def make_computer_move():
         make_move_if_valid(0)
 
     else:
-        idx = minimax(board_state_from_buttons(), player_idx, 20)
+        idx = minimax(board_state_from_buttons(), player_idx, 20, -100, 100)
         #print(idx)
         make_move_if_valid(idx)
 
@@ -131,12 +141,15 @@ def new_match():
     global player_idx
     global square_state
     global win_alert
+    global moves
 
     for button in buttons:
         button['text'] = ' '
 
     player_idx = 0
     square_state = None
+    moves = 0
+
     if win_alert != None:
         win_alert.destroy()
         win_alert = None
